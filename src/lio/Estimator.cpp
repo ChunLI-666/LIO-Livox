@@ -1,4 +1,5 @@
 #include "Estimator/Estimator.h"
+#include <iostream>
 
 Estimator::Estimator(const float& filter_corner, const float& filter_surf){
   laserCloudCornerFromLocal.reset(new pcl::PointCloud<PointType>);
@@ -848,7 +849,7 @@ void Estimator::double2vector(std::list<LidarFrame>& lidarFrameList){
 void Estimator::EstimateLidarPose(std::list<LidarFrame>& lidarFrameList,
                            const Eigen::Matrix4d& exTlb,
                            const Eigen::Vector3d& gravity,
-                           nav_msgs::Odometry& debugInfo){
+                           nav_msgs::msg::Odometry& debugInfo){
   
   Eigen::Matrix3d exRbl = exTlb.topLeftCorner(3,3).transpose();
   Eigen::Vector3d exPbl = -1.0 * exRbl * exTlb.topRightCorner(3,1);
@@ -1198,7 +1199,7 @@ void Estimator::Estimate(std::list<LidarFrame>& lidarFrameList,
     double deltaT = (t_before_opti - t_after_opti).norm();
 
     if (deltaR < 0.05 && deltaT < 0.05 || (iterOpt+1) == max_iters){
-      ROS_INFO("Frame: %d\n",frame_count++);
+      std::cout << "Frame: " << frame_count++ << std::endl;
       if(windowSize != SLIDEWINDOWSIZE) break;
       // apply marginalization
       auto *marginalization_info = new MarginalizationInfo();
