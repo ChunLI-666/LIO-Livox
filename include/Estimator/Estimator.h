@@ -1,18 +1,18 @@
 #ifndef LIO_LIVOX_ESTIMATOR_H
 #define LIO_LIVOX_ESTIMATOR_H
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <pcl_conversions/pcl_conversions.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/NavSatFix.h>
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <Eigen/Core>
-#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/msg/imu.hpp>
 #include <queue>
 #include <iterator>
 #include <future>
@@ -71,6 +71,7 @@ public:
 							+ ((P_to_Map(1) - lineP1(1)) * (P_to_Map(2) - lineP2(2)) - (P_to_Map(1) - lineP2(1)) * (P_to_Map(2) - lineP1(2)))
 								* ((P_to_Map(1) - lineP1(1)) * (P_to_Map(2) - lineP2(2)) - (P_to_Map(1) - lineP2(1)) * (P_to_Map(2) - lineP1(2))));
 			error = a012 / l12;
+			return error;
 		}
 	};
 
@@ -91,6 +92,7 @@ public:
 		double ComputeError(const Eigen::Matrix4d& pose){
 			Eigen::Vector3d P_to_Map = pose.topLeftCorner(3,3) * pointOri + pose.topRightCorner(3,1);
 			error = pa * P_to_Map(0) + pb * P_to_Map(1) + pc * P_to_Map(2) + pd;
+			return error;
 		}
 	};
 
@@ -109,6 +111,7 @@ public:
 		double ComputeError(const Eigen::Matrix4d& pose){
 			Eigen::Vector3d P_to_Map = pose.topLeftCorner(3,3) * pointOri + pose.topRightCorner(3,1);
 			error = (P_to_Map - pointProj).norm();
+			return error;
 		}
 	};
 
@@ -129,6 +132,7 @@ public:
 		double ComputeError(const Eigen::Matrix4d& pose){
 			Eigen::Vector3d P_to_Map = pose.topLeftCorner(3,3) * pointOri + pose.topRightCorner(3,1);
 			error = pa * P_to_Map(0) + pb * P_to_Map(1) + pc * P_to_Map(2) + pd;
+			return error;
 		}
 	};
 
@@ -147,7 +151,7 @@ public:
 	* \param[in] edges: store costfunctions
 	* \param[in] m4d: lidar pose, represented by matrix 4X4
 	*/
-	void processPointToLine(std::vector<ceres::CostFunction *>& edges,
+	void processPointToLine(std::vector<void*>& edges,
 							std::vector<FeatureLine>& vLineFeatures,
 							const pcl::PointCloud<PointType>::Ptr& laserCloudCorner,
 							const pcl::PointCloud<PointType>::Ptr& laserCloudCornerMap,
@@ -159,7 +163,7 @@ public:
 	* \param[in] edges: store costfunctions
 	* \param[in] m4d: lidar pose, represented by matrix 4X4
 	*/
-	void processPointToPlan(std::vector<ceres::CostFunction *>& edges,
+	void processPointToPlan(std::vector<void*>& edges,
 							std::vector<FeaturePlan>& vPlanFeatures,
 							const pcl::PointCloud<PointType>::Ptr& laserCloudSurf,
 							const pcl::PointCloud<PointType>::Ptr& laserCloudSurfMap,
@@ -167,7 +171,7 @@ public:
 							const Eigen::Matrix4d& exTlb,
 							const Eigen::Matrix4d& m4d);
 
-	void processPointToPlanVec(std::vector<ceres::CostFunction *>& edges,
+	void processPointToPlanVec(std::vector<void*>& edges,
 							   std::vector<FeaturePlanVec>& vPlanFeatures,
 							   const pcl::PointCloud<PointType>::Ptr& laserCloudSurf,
 							   const pcl::PointCloud<PointType>::Ptr& laserCloudSurfMap,
@@ -175,7 +179,7 @@ public:
 							   const Eigen::Matrix4d& exTlb,
 							   const Eigen::Matrix4d& m4d);
 				
-	void processNonFeatureICP(std::vector<ceres::CostFunction *>& edges,
+	void processNonFeatureICP(std::vector<void*>& edges,
 							  std::vector<FeatureNon>& vNonFeatures,
 							  const pcl::PointCloud<PointType>::Ptr& laserCloudNonFeature,
 							  const pcl::PointCloud<PointType>::Ptr& laserCloudNonFeatureLocal,
@@ -201,7 +205,7 @@ public:
 	void EstimateLidarPose(std::list<LidarFrame>& lidarFrameList,
 						   const Eigen::Matrix4d& exTlb,
 						   const Eigen::Vector3d& gravity,
-						   nav_msgs::Odometry& debugInfo);
+                                                    nav_msgs::msg::Odometry& debugInfo);
 
 	void Estimate(std::list<LidarFrame>& lidarFrameList,
 				  const Eigen::Matrix4d& exTlb,
@@ -275,6 +279,16 @@ private:
 	int map_skip_frame = 2; //every map_skip_frame frame update map
 	double plan_weight_tan = 0.0;
 	double thres_dist = 1.0;
+
+public:
+	/** \brief Save the complete map to PCD files
+	 * \param[in] output_dir: directory to save the map files
+	 */
+	void saveMapToPCD(const std::string& output_dir) {
+		if (map_manager != nullptr) {
+			map_manager->saveMapToPCD(output_dir);
+		}
+	}
 };
 
 #endif //LIO_LIVOX_ESTIMATOR_H

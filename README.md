@@ -56,6 +56,8 @@ Simultaneously, an extra thread builds and maintains the global map in parallel.
 
 
 ## Prerequisites
+
+### For ROS1 (Original)
 *  [Ubuntu](http://ubuntu.com) (tested on 16.04 and 18.04)
 *  [ROS](http://wiki.ros.org/ROS/Installation) (tested with Kinetic and Melodic)
 *  [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
@@ -67,7 +69,21 @@ Simultaneously, an extra thread builds and maintains the global map in parallel.
    sudo apt-get install libsuitesparse-dev
    ```
 
+### For ROS2 Foxy (This branch)
+*  [Ubuntu](http://ubuntu.com) 20.04
+*  [ROS2 Foxy](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html)
+*  [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
+*  [Ceres Solver](http://ceres-solver.org/installation.html)
+*  [PCL](http://www.pointclouds.org/downloads/linux.html)
+*  [livox_ros_driver2](https://github.com/Livox-SDK/livox_ros_driver2)
+*  Suitesparse
+   ```
+   sudo apt-get install libsuitesparse-dev
+   ```
+
 ## Compilation
+
+### ROS1 (Original)
 ```
 cd ~/catkin_ws/src
 git clone https://github.com/Livox-SDK/LIO-Livox
@@ -75,8 +91,19 @@ cd ..
 catkin_make
 ```
 
+### ROS2 Foxy (This branch)
+```
+cd ~/ros2_ws/src
+git clone https://github.com/Livox-SDK/LIO-Livox
+cd ..
+colcon build --packages-select lio_livox
+source install/setup.bash
+```
+
 ## Run with bag files:
-### Run the launch file:
+
+### ROS1 (Original)
+#### Run the launch file:
 ```
 cd ~/catkin_ws
 source devel/setup.bash
@@ -88,27 +115,65 @@ roslaunch lio_livox horizon.launch
 rosbag play YOUR_ROSBAG.bag
 ```
 
+### ROS2 Foxy (This branch)
+#### Run the launch file:
+```
+cd ~/ros2_ws
+source install/setup.bash
+ros2 launch lio_livox horizon.launch.py
+```
+
+#### Play your bag files:
+```
+ros2 bag play YOUR_ROSBAG.bag
+```
+
 ## Run with your device:
-### Run your LiDAR with livox_ros_driver
+
+### ROS1 (Original)
+#### Run your LiDAR with livox_ros_driver
 ```
 cd ~/catkin_ws
 source devel/setup.bash
 roslaunch livox_ros_driver livox_lidar_msg.launch
 ```
 
-### Run the launch file:
+#### Run the launch file:
 ```
 cd ~/catkin_ws
 source devel/setup.bash
 roslaunch lio_livox horizon.launch
 ```
 
+### ROS2 Foxy (This branch)
+#### Run your LiDAR with livox_ros_driver2
+```
+cd ~/ros2_ws
+source install/setup.bash
+ros2 launch livox_ros_driver2 livox_lidar_msg.launch.py
+```
+
+#### Run the launch file:
+```
+cd ~/ros2_ws
+source install/setup.bash
+ros2 launch lio_livox horizon.launch.py
+```
+
 ## Notes:
+
+### ROS1 (Original)
 The current version of the system is only adopted for Livox Horizon and Livox HAP. In theory, it should be able to run directly with a Livox Avia, but we haven't done enough tests.
 Besides, the system doesn't provide a interface of Livox mid series. If you want use mid-40 or mid-70, you can try [livox_mapping](https://github.com/Livox-SDK/livox_mapping).
 
 The topic of point cloud messages is /livox/lidar and its type is livox_ros_driver/CustomMsg. \
 The topic of IMU messages is /livox/imu and its type is sensor_msgs/Imu.
+
+### ROS2 Foxy (This branch)
+This ROS2 version supports Livox Horizon, HAP, and Mid-360 LiDARs. The system uses standard ROS2 PointCloud2 messages instead of custom messages for better compatibility.
+
+The topic of point cloud messages is /livox/lidar and its type is sensor_msgs/msg/PointCloud2. \
+The topic of IMU messages is /livox/imu and its type is sensor_msgs/msg/Imu.
 
 There are some parameters in launch files:
 *  IMU_Mode: choose IMU information fusion strategy, there are 3 modes:

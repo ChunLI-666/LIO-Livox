@@ -1,6 +1,5 @@
 %YAML:1.0
-
-
+---
 # switches
 Lidar_Type: 1    # 1-hap
 Used_Line: 6    # lines used for lio, set to 1~6

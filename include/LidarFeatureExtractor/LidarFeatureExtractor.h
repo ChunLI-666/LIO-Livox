@@ -1,8 +1,7 @@
 #ifndef LIO_LIVOX_LIDARFEATUREEXTRACTOR_H
 #define LIO_LIVOX_LIDARFEATUREEXTRACTOR_H
-#include <ros/ros.h>
-#include <livox_ros_driver/CustomMsg.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -57,40 +56,17 @@ public:
     void detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr& cloud,
                              std::vector<int>& pointsLessSharp);
                 
-    void FeatureExtract_with_segment(const livox_ros_driver::CustomMsgConstPtr &msg,
-                                     pcl::PointCloud<PointType>::Ptr& laserCloud,
-                                     pcl::PointCloud<PointType>::Ptr& laserConerFeature,
-                                     pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
-                                     pcl::PointCloud<PointType>::Ptr& laserNonFeature,
-                                     sensor_msgs::PointCloud2 &msg2,
-                                     int Used_Line = 1);
-
-    void FeatureExtract_with_segment_hap(const livox_ros_driver::CustomMsgConstPtr &msg,
-                                     	 pcl::PointCloud<PointType>::Ptr& laserCloud,
-                                     	 pcl::PointCloud<PointType>::Ptr& laserConerFeature,
-                                     	 pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
-                                     	 pcl::PointCloud<PointType>::Ptr& laserNonFeature,
-                                     	 sensor_msgs::PointCloud2 &msg2,
-                                     	 int Used_Line = 1);
-
-    /** \brief Detect lidar feature points of CustomMsg
-      * \param[in] msg: original CustomMsg need to be detected
-      * \param[in] laserCloud: transform CustomMsg to pcl point cloud format
+    /** \brief Detect lidar feature points from PointCloud2
+      * \param[in] msg: original PointCloud2 message
+      * \param[in] laserCloud: transform PointCloud2 to pcl point cloud format
       * \param[in] laserConerFeature: less Coner features extracted from laserCloud
       * \param[in] laserSurfFeature: less Surf features extracted from laserCloud
       */
-    void FeatureExtract(const livox_ros_driver::CustomMsgConstPtr &msg,
+    void FeatureExtract(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
                         pcl::PointCloud<PointType>::Ptr& laserCloud,
                         pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                         pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
-                        int Used_Line = 1,const int lidar_type=0);
-
-    void FeatureExtract_hap(const livox_ros_driver::CustomMsgConstPtr &msg,
-                            pcl::PointCloud<PointType>::Ptr& laserCloud,
-                            pcl::PointCloud<PointType>::Ptr& laserConerFeature,
-                            pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
-			    pcl::PointCloud<PointType>::Ptr& laserNonFeature,
-                            int Used_Line = 1);
+                        int Used_Line = 1, const int lidar_type = 0);
     void FeatureExtract_Mid(pcl::PointCloud<pcl::PointXYZINormal>::Ptr &msg,
                                                    pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                                                    pcl::PointCloud<PointType>::Ptr& laserSurfFeature);

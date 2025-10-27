@@ -1,11 +1,11 @@
 #ifndef LIO_LIVOX_IMUINTEGRATOR_H
 #define LIO_LIVOX_IMUINTEGRATOR_H
-#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/msg/imu.hpp>
 #include <queue>
 #include <mutex>
 #include <Eigen/Core>
 #include <utility>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include "sophus/so3.hpp"
 
 class IMUIntegrator{
@@ -15,7 +15,7 @@ public:
     /** \brief constructor of IMUIntegrator
      * \param[in] vIMU: IMU messages need to be integrated
      */
-    IMUIntegrator(std::vector<sensor_msgs::ImuConstPtr> vIMU);
+    IMUIntegrator(std::vector<sensor_msgs::msg::Imu::SharedPtr> vIMU);
 
     void Reset();
 
@@ -58,9 +58,9 @@ public:
     /** \brief push IMU message to the IMU buffer vimuMsg
      * \param[in] imu: the IMU message need to be pushed
      */
-    void PushIMUMsg(const sensor_msgs::ImuConstPtr& imu);
-    void PushIMUMsg(const std::vector<sensor_msgs::ImuConstPtr>& vimu);
-    const std::vector<sensor_msgs::ImuConstPtr> & GetIMUMsg() const;
+    void PushIMUMsg(const sensor_msgs::msg::Imu::SharedPtr& imu);
+    void PushIMUMsg(const std::vector<sensor_msgs::msg::Imu::SharedPtr>& vimu);
+    const std::vector<sensor_msgs::msg::Imu::SharedPtr> & GetIMUMsg() const;
 
     /** \brief only integrate gyro information of each IMU message stored in vimuMsg
      * \param[in] lastTime: the left time boundary of vimuMsg
@@ -92,7 +92,7 @@ public:
         O_BA = 12
     };
 private:
-    std::vector<sensor_msgs::ImuConstPtr> vimuMsg;
+    std::vector<sensor_msgs::msg::Imu::SharedPtr> vimuMsg;
     Eigen::Quaterniond dq;
     Eigen::Vector3d dp;
     Eigen::Vector3d dv;

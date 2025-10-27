@@ -1,5 +1,12 @@
 #include "MapManager/Map_Manager.h"
+#include "utils/logger.h"
 #include <fstream>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <iostream>
+#include <cstdlib>
+#include <pcl/io/pcd_io.h>
 
 MAP_MANAGER::MAP_MANAGER(const float& filter_corner, const float& filter_surf){
   for (int i = 0; i < laserCloudNum; i++) {
@@ -191,8 +198,10 @@ void MAP_MANAGER::MapIncrement(const pcl::PointCloud<PointType>::Ptr& laserCloud
         laserCloudCornerArray[i] = tmp;
       }
 
-      laserCloudCornerKdMap[i]->setInputCloud(laserCloudCornerArray[i]); 
-      *laserCloudCornerFromMap += *laserCloudCornerKdMap[i]->getInputCloud();
+      if (!laserCloudCornerArray[i]->empty()) {
+        laserCloudCornerKdMap[i]->setInputCloud(laserCloudCornerArray[i]); 
+        *laserCloudCornerFromMap += *laserCloudCornerKdMap[i]->getInputCloud();
+      }
     }
 
     if(SurfChangeFlag[i]){
@@ -205,8 +214,10 @@ void MAP_MANAGER::MapIncrement(const pcl::PointCloud<PointType>::Ptr& laserCloud
         laserCloudSurfArray[i] = tmp;
       }
 
-      laserCloudSurfKdMap[i]->setInputCloud(laserCloudSurfArray[i]);
-      *laserCloudSurfFromMap += *laserCloudSurfKdMap[i]->getInputCloud();
+      if (!laserCloudSurfArray[i]->empty()) {
+        laserCloudSurfKdMap[i]->setInputCloud(laserCloudSurfArray[i]);
+        *laserCloudSurfFromMap += *laserCloudSurfKdMap[i]->getInputCloud();
+      }
     }
 
     if(NonFeatureChangeFlag[i]){
@@ -219,8 +230,10 @@ void MAP_MANAGER::MapIncrement(const pcl::PointCloud<PointType>::Ptr& laserCloud
         laserCloudNonFeatureArray[i] = tmp;
       }
 
-      laserCloudNonFeatureKdMap[i]->setInputCloud(laserCloudNonFeatureArray[i]);
-      *laserCloudNonFeatureFromMap += *laserCloudNonFeatureKdMap[i]->getInputCloud();
+      if (!laserCloudNonFeatureArray[i]->empty()) {
+        laserCloudNonFeatureKdMap[i]->setInputCloud(laserCloudNonFeatureArray[i]);
+        *laserCloudNonFeatureFromMap += *laserCloudNonFeatureKdMap[i]->getInputCloud();
+      }
     }
       
   }
@@ -607,4 +620,114 @@ size_t MAP_MANAGER::FindUsedNonFeatureMap(const PointType *p,int a,int b, int c)
     }
 
     return cubeInd; 
+}
+
+void MAP_MANAGER::saveMapToPCD(const std::string& output_dir) {
+  // Create output directory if it doesn't exist
+  std::string mkdir_cmd = "mkdir -p " + output_dir;
+  int result = system(mkdir_cmd.c_str());
+  if (result != 0) {
+    LIO_LOG_ERROR << "Failed to create directory: " << output_dir;
+    return;
+  }
+
+  // Get current timestamp for unique filenames
+  auto now = std::chrono::system_clock::now();
+  auto time_t = std::chrono::system_clock::to_time_t(now);
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S");
+  std::string timestamp = ss.str();
+
+  // Lock the map manager to access the actual map data
+  std::unique_lock<std::mutex> locker(mtx_MapManager);
+  
+  // Combine all global maps from the for_match arrays (these contain the accumulated map)
+  pcl::PointCloud<PointType> fullMap;
+  
+  LIO_LOG_INFO << "Saving map to PCD files...";
+  
+  // Add corner features from for_match arrays
+  int corner_count = 0;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudCorner_for_match[i].empty()) {
+      fullMap += laserCloudCorner_for_match[i];
+      corner_count += laserCloudCorner_for_match[i].size();
+    }
+  }
+  LIO_LOG_INFO << "Corner features: " << corner_count << " points";
+
+  // Add surface features from for_match arrays
+  int surf_count = 0;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudSurf_for_match[i].empty()) {
+      fullMap += laserCloudSurf_for_match[i];
+      surf_count += laserCloudSurf_for_match[i].size();
+    }
+  }
+  LIO_LOG_INFO << "Surface features: " << surf_count << " points";
+
+  // Add non-feature points from for_match arrays
+  int nonfeature_count = 0;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudNonFeature_for_match[i].empty()) {
+      fullMap += laserCloudNonFeature_for_match[i];
+      nonfeature_count += laserCloudNonFeature_for_match[i].size();
+    }
+  }
+  LIO_LOG_INFO << "Non-feature points: " << nonfeature_count << " points";
+
+  // Unlock before saving files
+  locker.unlock();
+
+  // Save complete map
+  if (!fullMap.empty()) {
+    std::string full_map_path = output_dir + "/complete_map_" + timestamp + ".pcd";
+    if (pcl::io::savePCDFileBinary(full_map_path, fullMap) == -1) {
+      LIO_LOG_ERROR << "Failed to save complete map to: " << full_map_path;
+    } else {
+      LIO_LOG_INFO << "Complete map saved to: " << full_map_path;
+      LIO_LOG_INFO << "Total points: " << fullMap.size();
+    }
+  } else {
+    LIO_LOG_WARNING << "Warning: Map is empty, nothing to save.";
+  }
+
+  // Save individual feature maps
+  pcl::PointCloud<PointType> cornerMap;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudCorner_for_match[i].empty()) {
+      cornerMap += laserCloudCorner_for_match[i];
+    }
+  }
+  if (!cornerMap.empty()) {
+    std::string corner_path = output_dir + "/corner_map_" + timestamp + ".pcd";
+    pcl::io::savePCDFileBinary(corner_path, cornerMap);
+    LIO_LOG_INFO << "Corner map saved to: " << corner_path;
+  }
+
+  pcl::PointCloud<PointType> surfMap;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudSurf_for_match[i].empty()) {
+      surfMap += laserCloudSurf_for_match[i];
+    }
+  }
+  if (!surfMap.empty()) {
+    std::string surf_path = output_dir + "/surf_map_" + timestamp + ".pcd";
+    pcl::io::savePCDFileBinary(surf_path, surfMap);
+    LIO_LOG_INFO << "Surface map saved to: " << surf_path;
+  }
+
+  pcl::PointCloud<PointType> nonfeatureMap;
+  for (int i = 0; i < laserCloudNum; i++) {
+    if (!laserCloudNonFeature_for_match[i].empty()) {
+      nonfeatureMap += laserCloudNonFeature_for_match[i];
+    }
+  }
+  if (!nonfeatureMap.empty()) {
+    std::string nonfeature_path = output_dir + "/nonfeature_map_" + timestamp + ".pcd";
+    pcl::io::savePCDFileBinary(nonfeature_path, nonfeatureMap);
+    LIO_LOG_INFO << "Non-feature map saved to: " << nonfeature_path;
+  }
+
+  LIO_LOG_INFO << "Map saving completed!";
 }

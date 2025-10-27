@@ -1,4 +1,5 @@
 #include "segment/pointsCorrect.hpp"
+#include "utils/logger.h"
 
 float gnd_pos[6];
 int frame_count = 0;
@@ -38,7 +39,7 @@ int GetNeiborPCA_cor(SNeiborPCA_cor &npca, pcl::PointCloud<pcl::PointXYZ>::Ptr c
     {
         npca.neibors.clear();
     }
-    //std::cout << "in PCA2\n";
+    //LIO_LOG_DEBUG << "in PCA2";
     return npca.neibors.size();
 }
 
@@ -290,7 +291,7 @@ int GetGndPos(float *pos, float *fPoints,int pointNum){
     float tmpPos[6];
     if (pnum3 < 3)
     {
-        std::cout << "too few ground points!\n";
+        LIO_LOG_WARNING << "too few ground points!";
     }
     int gndnum = CalGndPos_cor(tmpPos,fPoints3,pnum3,1.0);//用法向量判断，获取到法向量 & 地面搜索点，放到tmppos
     if(gnd_pos[5]==0){

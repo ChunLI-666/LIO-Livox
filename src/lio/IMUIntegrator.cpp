@@ -1,4 +1,7 @@
 #include "IMUIntegrator/IMUIntegrator.h"
+#include "utils/logger.h"
+#include <rclcpp/rclcpp.hpp>
+#include <cassert>
 
 IMUIntegrator::IMUIntegrator(){
   Reset();
@@ -12,7 +15,7 @@ IMUIntegrator::IMUIntegrator(){
 /** \brief constructor of IMUIntegrator
  * \param[in] vIMU: IMU messages need to be integrated
  */
-IMUIntegrator::IMUIntegrator(std::vector<sensor_msgs::ImuConstPtr> vIMU):
+IMUIntegrator::IMUIntegrator(std::vector<sensor_msgs::msg::Imu::SharedPtr> vIMU):
 vimuMsg(std::move(vIMU)){
   Reset();
   noise.setZero();
@@ -49,13 +52,13 @@ const Eigen::Matrix<double, 15, 15>& IMUIntegrator::GetCovariance(){return covar
 
 const Eigen::Matrix<double, 15, 15> & IMUIntegrator::GetJacobian() const {return jacobian;}
 
-void IMUIntegrator::PushIMUMsg(const sensor_msgs::ImuConstPtr& imu){
+void IMUIntegrator::PushIMUMsg(const sensor_msgs::msg::Imu::SharedPtr& imu){
   vimuMsg.push_back(imu);
 }
-void IMUIntegrator::PushIMUMsg(const std::vector<sensor_msgs::ImuConstPtr>& vimu){
+void IMUIntegrator::PushIMUMsg(const std::vector<sensor_msgs::msg::Imu::SharedPtr>& vimu){
   vimuMsg.insert(vimuMsg.end(), vimu.begin(), vimu.end());
 }
-const std::vector<sensor_msgs::ImuConstPtr> & IMUIntegrator::GetIMUMsg() const {return vimuMsg;}
+const std::vector<sensor_msgs::msg::Imu::SharedPtr> & IMUIntegrator::GetIMUMsg() const {return vimuMsg;}
 
 void IMUIntegrator::GyroIntegration(double lastTime){
   double current_time = lastTime;
@@ -64,14 +67,14 @@ void IMUIntegrator::GyroIntegration(double lastTime){
     gyr << imu->angular_velocity.x,
             imu->angular_velocity.y,
             imu->angular_velocity.z;
-    double dt = imu->header.stamp.toSec() - current_time;
-    ROS_ASSERT(dt >= 0);
+    double dt = (imu->header.stamp.sec + imu->header.stamp.nanosec * 1e-9) - current_time;
+    assert(dt >= 0);
     Eigen::Matrix3d dR = Sophus::SO3d::exp(gyr*dt).matrix();
     Eigen::Quaterniond qr(dq*dR);
     if (qr.w()<0)
       qr.coeffs() *= -1;
     dq = qr.normalized();
-    current_time = imu->header.stamp.toSec();
+    current_time = imu->header.stamp.sec + imu->header.stamp.nanosec * 1e-9;
   }
 }
 
@@ -89,9 +92,9 @@ void IMUIntegrator::PreIntegration(double lastTime, const Eigen::Vector3d& bg, c
     acc << imu->linear_acceleration.x * gnorm,
             imu->linear_acceleration.y * gnorm,
             imu->linear_acceleration.z * gnorm;
-    double dt = imu->header.stamp.toSec() - current_time;
+    double dt = (imu->header.stamp.sec + imu->header.stamp.nanosec * 1e-9) - current_time;
     if(dt <= 0 )
-      ROS_WARN("dt <= 0");
+      LIO_LOG_WARNING << "dt <= 0";
     gyr -= bg;
     acc -= ba;
     double dt2 = dt*dt;
@@ -130,7 +133,7 @@ void IMUIntegrator::PreIntegration(double lastTime, const Eigen::Vector3d& bg, c
       qtmp.coeffs() *= -1;
     dq = qtmp.normalized();
     dtime += dt;
-    current_time = imu->header.stamp.toSec();
+    current_time = imu->header.stamp.sec + imu->header.stamp.nanosec * 1e-9;
   }
 }
 

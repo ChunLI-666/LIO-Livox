@@ -1,0 +1,19 @@
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+
+
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc
+
+build
+install
+log
+.codacy
+.vscode
+mapping_results
+logs/
+.cache/
+tests
+doc

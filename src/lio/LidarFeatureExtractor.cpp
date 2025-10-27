@@ -75,7 +75,7 @@ bool LidarFeatureExtractor::plane_judge(const std::vector<PointType>& point_list
   _matA1(2, 1) = a23;
   _matA1(2, 2) = a33;
 
-  Eigen::JacobiSVD<Eigen::Matrix3d> svd(_matA1, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::JacobiSVD<Eigen::Matrix3d> svd(_matA1, Eigen::ComputeFullU | Eigen::ComputeFullV);
   _matD1 = svd.singularValues();
   _matV1 = svd.matrixU();
   if (_matD1(0, 0) < plane_threshold * _matD1(1, 0)) {
@@ -116,9 +116,9 @@ void LidarFeatureExtractor::detectFeaturePoint(pcl::PointCloud<PointType>::Ptr& 
 #endif
     point.intensity = laserCloudIn->points[i].intensity;
 
-    if (!pcl_isfinite(point.x) ||
-        !pcl_isfinite(point.y) ||
-        !pcl_isfinite(point.z)) {
+    if (!std::isfinite(point.x) ||
+        !std::isfinite(point.y) ||
+        !std::isfinite(point.z)) {
       continue;
     }
 
@@ -586,12 +586,15 @@ void LidarFeatureExtractor::detectFeaturePoint(pcl::PointCloud<PointType>::Ptr& 
 
 }
 
-void LidarFeatureExtractor::FeatureExtract_with_segment(const livox_ros_driver::CustomMsgConstPtr &msg,
+// Removed CustomMsg support - use PointCloud2 only
+// Removed unused method - not declared in header
+/*
+void LidarFeatureExtractor::FeatureExtract_with_segment(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
                                                         pcl::PointCloud<PointType>::Ptr& laserCloud,
                                                         pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                                                         pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
                                                         pcl::PointCloud<PointType>::Ptr& laserNonFeature,
-                                                        sensor_msgs::PointCloud2 &msg_seg,
+                                                        sensor_msgs::msg::PointCloud2 &msg_seg,
                                                         const int Used_Line){
   laserCloud->clear();
   laserConerFeature->clear();
@@ -621,9 +624,9 @@ void LidarFeatureExtractor::FeatureExtract_with_segment(const livox_ros_driver::
     int line_num = (int)p.line;
     if(line_num > Used_Line-1) continue;
     if(p.x < 0.01) continue;
-    if (!pcl_isfinite(p.x) ||
-        !pcl_isfinite(p.y) ||
-        !pcl_isfinite(p.z)) {
+    if (!std::isfinite(p.x) ||
+        !std::isfinite(p.y) ||
+        !std::isfinite(p.z)) {
       continue;
     }
     point.x = p.x;
@@ -700,7 +703,8 @@ void LidarFeatureExtractor::FeatureExtract_with_segment(const livox_ros_driver::
 
 }
 
-void LidarFeatureExtractor::FeatureExtract_with_segment_hap(const livox_ros_driver::CustomMsgConstPtr &msg,
+/*
+void LidarFeatureExtractor::FeatureExtract_with_segment_hap(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
                                                             pcl::PointCloud<PointType>::Ptr& laserCloud,
                                                             pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                                                             pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
@@ -735,9 +739,9 @@ void LidarFeatureExtractor::FeatureExtract_with_segment_hap(const livox_ros_driv
     int line_num = (int)p.line;
     if(line_num > Used_Line-1) continue;
     if(p.x < 0.01) continue;
-    if (!pcl_isfinite(p.x) ||
-        !pcl_isfinite(p.y) ||
-        !pcl_isfinite(p.z)) {
+    if (!std::isfinite(p.x) ||
+        !std::isfinite(p.y) ||
+        !std::isfinite(p.z)) {
       continue;
     }
     point.x = p.x;
@@ -791,8 +795,9 @@ void LidarFeatureExtractor::FeatureExtract_with_segment_hap(const livox_ros_driv
   }
 
 }
+*/
 
-
+/*
 void LidarFeatureExtractor::detectFeaturePoint2(pcl::PointCloud<PointType>::Ptr& cloud,
                                                 pcl::PointCloud<PointType>::Ptr& pointsLessFlat,
                                                 pcl::PointCloud<PointType>::Ptr& pointsNonFeature){
@@ -935,8 +940,9 @@ void LidarFeatureExtractor::detectFeaturePoint2(pcl::PointCloud<PointType>::Ptr&
     }
   }  
 }
+*/
 
-
+/*
 void LidarFeatureExtractor::detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr& cloud,
                                                 std::vector<int>& pointsLessSharp){
   int CloudFeatureFlag[20000];
@@ -962,9 +968,9 @@ void LidarFeatureExtractor::detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr&
     point.normal_x = 1.0;
     point.intensity = laserCloudIn->points[i].intensity;
 
-    if (!pcl_isfinite(point.x) ||
-        !pcl_isfinite(point.y) ||
-        !pcl_isfinite(point.z)) {
+    if (!std::isfinite(point.x) ||
+        !std::isfinite(point.y) ||
+        !std::isfinite(point.z)) {
       continue;
     }
 
@@ -1181,9 +1187,10 @@ void LidarFeatureExtractor::detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr&
   }
 
 }
+*/
 
-
-void LidarFeatureExtractor::FeatureExtract(const livox_ros_driver::CustomMsgConstPtr &msg,
+/*
+void LidarFeatureExtractor::FeatureExtract(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
                                            pcl::PointCloud<PointType>::Ptr& laserCloud,
                                            pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                                            pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
@@ -1256,8 +1263,10 @@ void LidarFeatureExtractor::FeatureExtract(const livox_ros_driver::CustomMsgCons
   laserSurfFeature->push_back(p);
   }
 }
+*/
 
-void LidarFeatureExtractor::FeatureExtract_hap(const livox_ros_driver::CustomMsgConstPtr &msg,
+/*
+void LidarFeatureExtractor::FeatureExtract_hap(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
                                                pcl::PointCloud<PointType>::Ptr& laserCloud,
                                                pcl::PointCloud<PointType>::Ptr& laserConerFeature,
                                                pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
@@ -1287,9 +1296,9 @@ void LidarFeatureExtractor::FeatureExtract_hap(const livox_ros_driver::CustomMsg
     int line_num = (int)p.line;
     if(line_num > Used_Line-1) continue;
     if(p.x < 0.01) continue;
-    if (!pcl_isfinite(p.x) ||
-        !pcl_isfinite(p.y) ||
-        !pcl_isfinite(p.z)) {
+    if (!std::isfinite(p.x) ||
+        !std::isfinite(p.y) ||
+        !std::isfinite(p.z)) {
       continue;
     }
     point.x = p.x;
@@ -1320,6 +1329,7 @@ void LidarFeatureExtractor::FeatureExtract_hap(const livox_ros_driver::CustomMsg
       laserNonFeature->push_back(p);
   }
 }
+*/
 
 void LidarFeatureExtractor::FeatureExtract_Mid(pcl::PointCloud<pcl::PointXYZINormal>::Ptr &msg,
                                            pcl::PointCloud<PointType>::Ptr& laserConerFeature,

@@ -1,68 +1,129 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.8)
 project(lio_livox)
 
-SET(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
+# Generate compile_commands.json for better IDE support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS
-  	     message_generation
-  	     geometry_msgs
-  	     nav_msgs
-  	     sensor_msgs
-  	     roscpp
-  	     rospy
-  	     std_msgs
-  	     tf
-  	     tf_conversions
-  	     rosbag
-  	     livox_ros_driver
-  	     eigen_conversions
-  	     pcl_conversions
-  	     pcl_ros
-  	     message_filters
-  	     std_srvs)
+# find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(pcl_ros REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
-find_package(Ceres REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(SuiteSparse REQUIRED)
+find_package(Ceres REQUIRED)
+find_package(glog REQUIRED)
 
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include directories
 include_directories(include
-        	    ${catkin_INCLUDE_DIRS}
-		    ${EIGEN3_INCLUDE_DIR}
-		    ${PCL_INCLUDE_DIRS}
-        	    ${CERES_INCLUDE_DIRS}
-		    ${OpenCV_INCLUDE_DIRS}
-        	    ${SUITESPARSE_INCLUDE_DIRS})
+                   ${EIGEN3_INCLUDE_DIR}
+                   ${PCL_INCLUDE_DIRS}
+                   ${CERES_INCLUDE_DIRS}
+                   ${OpenCV_INCLUDE_DIRS}
+                   ${SUITESPARSE_INCLUDE_DIRS}
+                   ${GLOG_INCLUDE_DIRS})
 
-##################
-## ROS messages ##
-##################
+# ScanRegistration executable
+add_executable(ScanRegistration 
+               src/lio/ScanRegistration.cpp
+               src/lio/LidarFeatureExtractor.cpp
+               src/segment/segment.cpp
+               src/segment/pointsCorrect.cpp)
 
-generate_messages(DEPENDENCIES std_msgs)
+ament_target_dependencies(ScanRegistration
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  pcl_conversions
+  pcl_ros
+  message_filters
+  std_srvs
+  visualization_msgs
+)
 
-catkin_package(CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs message_runtime 
-  	       pcl_conversions pcl_ros message_filters std_srvs tf_conversions tf 
-	       eigen_conversions DEPENDS PCL OpenCV INCLUDE_DIRS include)
+target_link_libraries(ScanRegistration 
+  ${PCL_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+  ${CERES_LIBRARIES}
+  ${GLOG_LIBRARIES}
+)
 
-add_executable (ScanRegistration 
-		src/lio/ScanRegistration.cpp
-		src/lio/LidarFeatureExtractor.cpp
-        	src/segment/segment.cpp
-        	src/segment/pointsCorrect.cpp)
-target_link_libraries(ScanRegistration ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+# PoseEstimation executable
+add_executable(PoseEstimation 
+               src/lio/PoseEstimation.cpp
+               src/lio/Estimator.cpp
+               src/lio/IMUIntegrator.cpp
+               src/lio/ceresfunc.cpp 
+               src/lio/Map_Manager.cpp)
 
-add_executable (PoseEstimation 
-		src/lio/PoseEstimation.cpp
-		src/lio/Estimator.cpp
-		src/lio/IMUIntegrator.cpp
-		src/lio/ceresfunc.cpp 
-		src/lio/Map_Manager.cpp)
-target_link_libraries(PoseEstimation ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES})
+ament_target_dependencies(PoseEstimation
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  pcl_conversions
+  pcl_ros
+  message_filters
+  std_srvs
+  visualization_msgs
+)
+
+target_link_libraries(PoseEstimation 
+  ${PCL_LIBRARIES}
+  ${CERES_LIBRARIES}
+  ${GLOG_LIBRARIES}
+)
+
+# Install executables
+install(TARGETS
+  ScanRegistration
+  PoseEstimation
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install launch files
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install config files
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install rviz config
+install(DIRECTORY rviz_cfg
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+ament_package()
 
 
 

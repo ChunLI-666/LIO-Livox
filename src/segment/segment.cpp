@@ -1,4 +1,5 @@
 #include "segment/segment.hpp"
+#include "utils/logger.h"
 
 #define N_FRAME 5
 
@@ -119,7 +120,7 @@ int PCSeg::DoSeg(int *pLabel1, float* fPoints1, int pointNum)
     }
     else
     {
-        std::cout << "0 above ground points!\n";
+        LIO_LOG_WARNING << "0 above ground points!";
     }
 
   

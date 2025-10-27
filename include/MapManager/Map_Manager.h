@@ -105,6 +105,11 @@ public:
     pcl::PointCloud<PointType> laserCloudCorner_for_match[4851];
     pcl::PointCloud<PointType> laserCloudNonFeature_for_match[4851];
 
+    /** \brief Save the complete map to PCD files
+     * \param[in] output_dir: directory to save the map files
+     */
+    void saveMapToPCD(const std::string& output_dir);
+
 private:
     int laserCloudCenWidth = 10;
     int laserCloudCenHeight = 5;
