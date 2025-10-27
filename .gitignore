@@ -15,5 +15,3 @@ log
 mapping_results
 logs/
 .cache/
-tests
-doc
