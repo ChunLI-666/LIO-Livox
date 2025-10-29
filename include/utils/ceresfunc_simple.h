@@ -1,8 +1,8 @@
-#ifndef LIO_LIVOX_CERESFUNC_SIMPLE_H
-#define LIO_LIVOX_CERESFUNC_SIMPLE_H
+#ifndef LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_SIMPLE_H_
+#define LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_SIMPLE_H_
 
 // Check if full ceresfunc.h is included, if so, skip this file
-#ifndef LIO_LIVOX_CERESFUNC_H
+#ifndef LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_H_
 
 // Simplified version without Ceres dependency
 // This is a placeholder for the ROS2 migration
@@ -15,7 +15,7 @@
 #include "sophus/so3.hpp"
 #include "IMUIntegrator/IMUIntegrator.h"
 
-const int NUM_THREADS = 4;
+const int kNumThreads = 4;
 
 // Placeholder structures - these would need to be implemented
 // or the Ceres dependency added back
@@ -54,6 +54,6 @@ public:
     MarginalizationInfo *marginalization_info;
 };
 
-#endif // LIO_LIVOX_CERESFUNC_H
+#endif  // LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_H_
 
-#endif // LIO_LIVOX_CERESFUNC_SIMPLE_H
+#endif  // LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_SIMPLE_H_

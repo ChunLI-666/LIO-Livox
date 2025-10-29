@@ -12,78 +12,79 @@
 #include <iostream>
 #include <cstdlib>
 
-Estimator::Estimator(const float& filter_corner, const float& filter_surf){
-  laserCloudCornerFromLocal.reset(new pcl::PointCloud<PointType>);
-  laserCloudSurfFromLocal.reset(new pcl::PointCloud<PointType>);
-  laserCloudNonFeatureFromLocal.reset(new pcl::PointCloud<PointType>);
-  laserCloudCornerLast.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudCornerLast)
+Estimator::Estimator(const float& filter_corner, const float& filter_surf) {
+  laser_cloud_corner_from_local_.reset(new pcl::PointCloud<PointType>);
+  laser_cloud_surf_from_local_.reset(new pcl::PointCloud<PointType>);
+  laser_cloud_non_feature_from_local_.reset(new pcl::PointCloud<PointType>);
+  laser_cloud_corner_last_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_corner_last_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudSurfLast.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudSurfLast)
+  laser_cloud_surf_last_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_surf_last_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudNonFeatureLast.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudNonFeatureLast)
+  laser_cloud_non_feature_last_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_non_feature_last_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudCornerStack.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudCornerStack)
+  laser_cloud_corner_stack_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_corner_stack_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudSurfStack.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudSurfStack)
+  laser_cloud_surf_stack_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_surf_stack_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudNonFeatureStack.resize(SLIDEWINDOWSIZE);
-  for(auto& p:laserCloudNonFeatureStack)
+  laser_cloud_non_feature_stack_.resize(kSlideWindowSize);
+  for (auto& p : laser_cloud_non_feature_stack_)
     p.reset(new pcl::PointCloud<PointType>);
-  laserCloudCornerForMap.reset(new pcl::PointCloud<PointType>);
-  laserCloudSurfForMap.reset(new pcl::PointCloud<PointType>);
-  laserCloudNonFeatureForMap.reset(new pcl::PointCloud<PointType>);
-  transformForMap.setIdentity();
-  kdtreeCornerFromLocal.reset(new pcl::KdTreeFLANN<PointType>);
-  kdtreeSurfFromLocal.reset(new pcl::KdTreeFLANN<PointType>);
-  kdtreeNonFeatureFromLocal.reset(new pcl::KdTreeFLANN<PointType>);
+  laser_cloud_corner_for_map_.reset(new pcl::PointCloud<PointType>);
+  laser_cloud_surf_for_map_.reset(new pcl::PointCloud<PointType>);
+  laser_cloud_non_feature_for_map_.reset(new pcl::PointCloud<PointType>);
+  transform_for_map_.setIdentity();
+  kdtree_corner_from_local_.reset(new pcl::KdTreeFLANN<PointType>);
+  kdtree_surf_from_local_.reset(new pcl::KdTreeFLANN<PointType>);
+  kdtree_non_feature_from_local_.reset(new pcl::KdTreeFLANN<PointType>);
 
-  for(int i = 0; i < localMapWindowSize; i++){
-    localCornerMap[i].reset(new pcl::PointCloud<PointType>);
-    localSurfMap[i].reset(new pcl::PointCloud<PointType>);
-    localNonFeatureMap[i].reset(new pcl::PointCloud<PointType>);
+  for (int i = 0; i < kLocalMapWindowSize; i++) {
+    local_corner_map_[i].reset(new pcl::PointCloud<PointType>);
+    local_surf_map_[i].reset(new pcl::PointCloud<PointType>);
+    local_non_feature_map_[i].reset(new pcl::PointCloud<PointType>);
   }
 
-  downSizeFilterCorner.setLeafSize(filter_corner, filter_corner, filter_corner);
-  downSizeFilterSurf.setLeafSize(filter_surf, filter_surf, filter_surf);
-  downSizeFilterNonFeature.setLeafSize(0.4, 0.4, 0.4);
-  map_manager = new MAP_MANAGER(filter_corner, filter_surf);
-  threadMap = std::thread(&Estimator::threadMapIncrement, this);
+  down_size_filter_corner_.setLeafSize(filter_corner, filter_corner,
+                                        filter_corner);
+  down_size_filter_surf_.setLeafSize(filter_surf, filter_surf, filter_surf);
+  down_size_filter_non_feature_.setLeafSize(0.4, 0.4, 0.4);
+  map_manager_ = new MapManager(filter_corner, filter_surf);
+  thread_map_ = std::thread(&Estimator::threadMapIncrement, this);
 }
 
-Estimator::~Estimator(){
-  delete map_manager;
-}
+Estimator::~Estimator() { delete map_manager_; }
 
-[[noreturn]] void Estimator::threadMapIncrement(){
-  pcl::PointCloud<PointType>::Ptr laserCloudCorner(new pcl::PointCloud<PointType>);
-  pcl::PointCloud<PointType>::Ptr laserCloudSurf(new pcl::PointCloud<PointType>);
-  pcl::PointCloud<PointType>::Ptr laserCloudNonFeature(new pcl::PointCloud<PointType>);
-  pcl::PointCloud<PointType>::Ptr laserCloudCorner_to_map(new pcl::PointCloud<PointType>);
-  pcl::PointCloud<PointType>::Ptr laserCloudSurf_to_map(new pcl::PointCloud<PointType>);
-  pcl::PointCloud<PointType>::Ptr laserCloudNonFeature_to_map(new pcl::PointCloud<PointType>);
+[[noreturn]] void Estimator::threadMapIncrement() {
+  pcl::PointCloud<PointType>::Ptr laserCloudCorner(
+      new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr laserCloudSurf(
+      new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr laserCloudNonFeature(
+      new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr laserCloudCorner_to_map(
+      new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr laserCloudSurf_to_map(
+      new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr laserCloudNonFeature_to_map(
+      new pcl::PointCloud<PointType>);
   Eigen::Matrix4d transform;
-  while(true){
-    std::unique_lock<std::mutex> locker(mtx_Map);
-    if(!laserCloudCornerForMap->empty()){
+  while (true) {
+    std::unique_lock<std::mutex> locker(mtx_map_);
+    if (!laser_cloud_corner_for_map_->empty()) {
+      map_update_id_++;
 
-      map_update_ID ++;
-
-      map_manager->featureAssociateToMap(laserCloudCornerForMap,
-                                         laserCloudSurfForMap,
-                                         laserCloudNonFeatureForMap,
-                                         laserCloudCorner,
-                                         laserCloudSurf,
-                                         laserCloudNonFeature,
-                                         transformForMap);
-      laserCloudCornerForMap->clear();
-      laserCloudSurfForMap->clear();
-      laserCloudNonFeatureForMap->clear();
-      transform = transformForMap;
+      map_manager_->featureAssociateToMap(
+          laser_cloud_corner_for_map_, laser_cloud_surf_for_map_,
+          laser_cloud_non_feature_for_map_, laserCloudCorner, laserCloudSurf,
+          laserCloudNonFeature, transform_for_map_);
+      laser_cloud_corner_for_map_->clear();
+      laser_cloud_surf_for_map_->clear();
+      laser_cloud_non_feature_for_map_->clear();
+      transform = transform_for_map_;
       locker.unlock();
 
       *laserCloudCorner_to_map += *laserCloudCorner;
@@ -94,21 +95,20 @@ Estimator::~Estimator(){
       laserCloudSurf->clear();
       laserCloudNonFeature->clear();
 
-      if(map_update_ID % map_skip_frame == 0){
-        LIO_LOG_INFO << "[threadMapIncrement] Updating map - frame " << map_update_ID 
-                  << ", Corner: " << laserCloudCorner_to_map->points.size()
-                  << ", Surf: " << laserCloudSurf_to_map->points.size();
-        map_manager->MapIncrement(laserCloudCorner_to_map, 
-                                  laserCloudSurf_to_map, 
-                                  laserCloudNonFeature_to_map,
-                                  transform);
+      if (map_update_id_ % map_skip_frame_ == 0) {
+        LIO_LOG_INFO << "[threadMapIncrement] Updating map - frame "
+                     << map_update_id_ << ", Corner: "
+                     << laserCloudCorner_to_map->points.size()
+                     << ", Surf: " << laserCloudSurf_to_map->points.size();
+        map_manager_->MapIncrement(laserCloudCorner_to_map, laserCloudSurf_to_map,
+                                  laserCloudNonFeature_to_map, transform);
 
         laserCloudCorner_to_map->clear();
         laserCloudSurf_to_map->clear();
         laserCloudNonFeature_to_map->clear();
       }
-      
-    }else
+
+    } else
       locker.unlock();
 
     std::chrono::milliseconds dura(2);
@@ -155,26 +155,29 @@ void Estimator::processPointToLine(std::vector<void*>& edges,
   int debug_num22 = 0;
   for (int i = 0; i < laserCloudCornerStackNum; i++) {
     _pointOri = laserCloudCorner->points[i];
-    MAP_MANAGER::pointAssociateToMap(&_pointOri, &_pointSel, m4d);
-    int id = map_manager->FindUsedCornerMap(&_pointSel,laserCenWidth_last,laserCenHeight_last,laserCenDepth_last);
+    MapManager::pointAssociateToMap(&_pointOri, &_pointSel, m4d);
+    int id = map_manager_->FindUsedCornerMap(&_pointSel, laser_cen_width_last_,
+                                             laser_cen_height_last_,
+                                             laser_cen_depth_last_);
 
     if(id == 5000) continue;
 
     if(std::isnan(_pointSel.x) || std::isnan(_pointSel.y) ||std::isnan(_pointSel.z)) continue;
 
-    if(GlobalCornerMap[id].points.size() > 100) {
-      CornerKdMap[id].nearestKSearch(_pointSel, 5, _pointSearchInd, _pointSearchSqDis);
-      
-      if (_pointSearchSqDis[4] < thres_dist) {
+    if (global_corner_map_[id].points.size() > 100) {
+      corner_kd_map_[id].nearestKSearch(_pointSel, 5, _pointSearchInd,
+                                        _pointSearchSqDis);
+
+      if (_pointSearchSqDis[4] < thres_dist_) {
 
         debug_num1 ++;
       float cx = 0;
       float cy = 0;
       float cz = 0;
       for (int j = 0; j < 5; j++) {
-        cx += GlobalCornerMap[id].points[_pointSearchInd[j]].x;
-        cy += GlobalCornerMap[id].points[_pointSearchInd[j]].y;
-        cz += GlobalCornerMap[id].points[_pointSearchInd[j]].z;
+        cx += global_corner_map_[id].points[_pointSearchInd[j]].x;
+        cy += global_corner_map_[id].points[_pointSearchInd[j]].y;
+        cz += global_corner_map_[id].points[_pointSearchInd[j]].z;
       }
       cx /= 5;
       cy /= 5;
@@ -187,9 +190,9 @@ void Estimator::processPointToLine(std::vector<void*>& edges,
       float a23 = 0;
       float a33 = 0;
       for (int j = 0; j < 5; j++) {
-        float ax = GlobalCornerMap[id].points[_pointSearchInd[j]].x - cx;
-        float ay = GlobalCornerMap[id].points[_pointSearchInd[j]].y - cy;
-        float az = GlobalCornerMap[id].points[_pointSearchInd[j]].z - cz;
+        float ax = global_corner_map_[id].points[_pointSearchInd[j]].x - cx;
+        float ay = global_corner_map_[id].points[_pointSearchInd[j]].y - cy;
+        float az = global_corner_map_[id].points[_pointSearchInd[j]].z - cz;
 
         a11 += ax * ax;
         a12 += ax * ay;

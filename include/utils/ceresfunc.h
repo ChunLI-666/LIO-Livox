@@ -1,5 +1,5 @@
-#ifndef LIO_LIVOX_CERESFUNC_H
-#define LIO_LIVOX_CERESFUNC_H
+#ifndef LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_H_
+#define LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_H_
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 #include <utility>
@@ -8,7 +8,7 @@
 #include "sophus/so3.hpp"
 #include "IMUIntegrator/IMUIntegrator.h"
 
-const int NUM_THREADS = 4;
+const int kNumThreads = 4;
 
 /** \brief Residual Block Used for marginalization
  */
@@ -173,16 +173,16 @@ public:
 		A.setZero();
 		b.setZero();
 
-		pthread_t tids[NUM_THREADS];
-		ThreadsStruct threadsstruct[NUM_THREADS];
+		pthread_t tids[kNumThreads];
+		ThreadsStruct threadsstruct[kNumThreads];
 		int i = 0;
 		for (auto it : factors)
 		{
 			threadsstruct[i].sub_factors.push_back(it);
 			i++;
-			i = i % NUM_THREADS;
+			i = i % kNumThreads;
 		}
-		for (int i = 0; i < NUM_THREADS; i++)
+		for (int i = 0; i < kNumThreads; i++)
 		{
 			threadsstruct[i].A = Eigen::MatrixXd::Zero(pos,pos);
 			threadsstruct[i].b = Eigen::VectorXd::Zero(pos);
@@ -195,7 +195,7 @@ public:
 				exit(1);
 			}
 		}
-		for( int i = NUM_THREADS - 1; i >= 0; i--)
+		for( int i = kNumThreads - 1; i >= 0; i--)
 		{
 			pthread_join( tids[i], NULL );
 			A += threadsstruct[i].A;
@@ -818,4 +818,4 @@ struct Cost_Initialization_Prior_R
 	Eigen::Matrix3d sqrt_information;
 };
 
-#endif //LIO_LIVOX_CERESFUNC_H
+#endif  // LIO_LIVOX_INCLUDE_UTILS_CERESFUNC_H_

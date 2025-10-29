@@ -1,5 +1,5 @@
-#ifndef LIO_LIVOX_LOGGER_H
-#define LIO_LIVOX_LOGGER_H
+#ifndef LIO_LIVOX_INCLUDE_UTILS_LOGGER_H_
+#define LIO_LIVOX_INCLUDE_UTILS_LOGGER_H_
 
 #include <glog/logging.h>
 #include <string>
@@ -152,4 +152,4 @@ public:
 #define LIO_LOG_DEBUG_EVERY_N(n) if (false) LOG_EVERY_N(INFO, n)
 #endif
 
-#endif // LIO_LIVOX_LOGGER_H
+#endif  // LIO_LIVOX_INCLUDE_UTILS_LOGGER_H_
