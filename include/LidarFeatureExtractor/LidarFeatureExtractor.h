@@ -1,101 +1,115 @@
-#ifndef LIO_LIVOX_LIDARFEATUREEXTRACTOR_H
-#define LIO_LIVOX_LIDARFEATUREEXTRACTOR_H
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <pcl_conversions/pcl_conversions.h>
+#ifndef INCLUDE_LIDARFEATUREEXTRACTOR_LIDARFEATUREEXTRACTOR_H_
+#define INCLUDE_LIDARFEATUREEXTRACTOR_LIDARFEATUREEXTRACTOR_H_
+#include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 #include <future>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <vector>
+
 #include "opencv2/core.hpp"
 #include "segment/segment.hpp"
-class LidarFeatureExtractor{
-    typedef pcl::PointXYZINormal PointType;
-public:
-    /** \brief constructor of LidarFeatureExtractor
-      * \param[in] n_scans: lines used to extract lidar features
-      */
-    LidarFeatureExtractor(int n_scans,int NumCurvSize,float DistanceFaraway,int NumFlat,int PartNum,float FlatThreshold,
-                          float BreakCornerDis,float LidarNearestDis,float KdTreeCornerOutlierDis);
+class LidarFeatureExtractor {
+  typedef pcl::PointXYZINormal PointType;
 
-    /** \brief transform float to int
-      */
-    static uint32_t _float_as_int(float f){
-      union{uint32_t i; float f;} conv{};
-      conv.f = f;
-      return conv.i;
-    }
+ public:
+  /** \brief constructor of LidarFeatureExtractor
+   * \param[in] n_scans: lines used to extract lidar features
+   */
+  LidarFeatureExtractor(int n_scans, int NumCurvSize, float DistanceFaraway,
+                        int NumFlat, int PartNum, float FlatThreshold,
+                        float BreakCornerDis, float LidarNearestDis,
+                        float KdTreeCornerOutlierDis);
 
-    /** \brief transform int to float
-      */
-    static float _int_as_float(uint32_t i){
-      union{float f; uint32_t i;} conv{};
-      conv.i = i;
-      return conv.f;
-    }
+  /** \brief transform float to int
+   */
+  static uint32_t _float_as_int(float f) {
+    union {
+      uint32_t i;
+      float f;
+    } conv{};
+    conv.f = f;
+    return conv.i;
+  }
 
-    /** \brief Determine whether the point_list is flat
-      * \param[in] point_list: points need to be judged
-      * \param[in] plane_threshold
-      */
-    bool plane_judge(const std::vector<PointType>& point_list,const int plane_threshold);
+  /** \brief transform int to float
+   */
+  static float _int_as_float(uint32_t i) {
+    union {
+      float f;
+      uint32_t i;
+    } conv{};
+    conv.i = i;
+    return conv.f;
+  }
 
-    /** \brief Detect lidar feature points
-      * \param[in] cloud: original lidar cloud need to be detected
-      * \param[in] pointsLessSharp: less sharp index of cloud
-      * \param[in] pointsLessFlat: less flat index of cloud
-      */
-    void detectFeaturePoint(pcl::PointCloud<PointType>::Ptr& cloud,
-                            std::vector<int>& pointsLessSharp,
-                            std::vector<int>& pointsLessFlat);
+  /** \brief Determine whether the point_list is flat
+   * \param[in] point_list: points need to be judged
+   * \param[in] plane_threshold
+   */
+  bool plane_judge(const std::vector<PointType>& point_list,
+                   const int plane_threshold);
 
-    void detectFeaturePoint2(pcl::PointCloud<PointType>::Ptr& cloud,
-                             pcl::PointCloud<PointType>::Ptr& pointsLessFlat,
-                             pcl::PointCloud<PointType>::Ptr& pointsNonFeature);
+  /** \brief Detect lidar feature points
+   * \param[in] cloud: original lidar cloud need to be detected
+   * \param[in] pointsLessSharp: less sharp index of cloud
+   * \param[in] pointsLessFlat: less flat index of cloud
+   */
+  void detectFeaturePoint(pcl::PointCloud<PointType>::Ptr& cloud,
+                          std::vector<int>& pointsLessSharp,
+                          std::vector<int>& pointsLessFlat);
 
-    void detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr& cloud,
-                             std::vector<int>& pointsLessSharp);
-                
-    /** \brief Detect lidar feature points from PointCloud2
-      * \param[in] msg: original PointCloud2 message
-      * \param[in] laserCloud: transform PointCloud2 to pcl point cloud format
-      * \param[in] laserConerFeature: less Coner features extracted from laserCloud
-      * \param[in] laserSurfFeature: less Surf features extracted from laserCloud
-      */
-    void FeatureExtract(const sensor_msgs::msg::PointCloud2::SharedPtr &msg,
-                        pcl::PointCloud<PointType>::Ptr& laserCloud,
-                        pcl::PointCloud<PointType>::Ptr& laserConerFeature,
-                        pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
-                        int Used_Line = 1, const int lidar_type = 0);
-    void FeatureExtract_Mid(pcl::PointCloud<pcl::PointXYZINormal>::Ptr &msg,
-                                                   pcl::PointCloud<PointType>::Ptr& laserConerFeature,
-                                                   pcl::PointCloud<PointType>::Ptr& laserSurfFeature);
-private:
-    /** \brief lines used to extract lidar features */
-    const int N_SCANS;
+  void detectFeaturePoint2(pcl::PointCloud<PointType>::Ptr& cloud,
+                           pcl::PointCloud<PointType>::Ptr& pointsLessFlat,
+                           pcl::PointCloud<PointType>::Ptr& pointsNonFeature);
 
-    /** \brief store original points of each line */
-    std::vector<pcl::PointCloud<PointType>::Ptr> vlines;
+  void detectFeaturePoint3(pcl::PointCloud<PointType>::Ptr& cloud,
+                           std::vector<int>& pointsLessSharp);
 
-    /** \brief store corner feature index of each line */
-    std::vector<std::vector<int>> vcorner;
+  /** \brief Detect lidar feature points from PointCloud2
+   * \param[in] msg: original PointCloud2 message
+   * \param[in] laserCloud: transform PointCloud2 to pcl point cloud format
+   * \param[in] laserConerFeature: less Coner features extracted from laserCloud
+   * \param[in] laserSurfFeature: less Surf features extracted from laserCloud
+   */
+  void FeatureExtract(const sensor_msgs::msg::PointCloud2::SharedPtr& msg,
+                      pcl::PointCloud<PointType>::Ptr& laserCloud,
+                      pcl::PointCloud<PointType>::Ptr& laserConerFeature,
+                      pcl::PointCloud<PointType>::Ptr& laserSurfFeature,
+                      int Used_Line = 1, const int lidar_type = 0);
+  void FeatureExtract_Mid(pcl::PointCloud<pcl::PointXYZINormal>::Ptr& msg,
+                          pcl::PointCloud<PointType>::Ptr& laserConerFeature,
+                          pcl::PointCloud<PointType>::Ptr& laserSurfFeature);
 
-    /** \brief store surf feature index of each line */
-    std::vector<std::vector<int>> vsurf;
+ private:
+  /** \brief lines used to extract lidar features */
+  const int N_SCANS;
 
-    int thNumCurvSize;
+  /** \brief store original points of each line */
+  std::vector<pcl::PointCloud<PointType>::Ptr> vlines;
 
-    float thDistanceFaraway;
+  /** \brief store corner feature index of each line */
+  std::vector<std::vector<int>> vcorner;
 
-    int thNumFlat;
-    
-    int thPartNum;
+  /** \brief store surf feature index of each line */
+  std::vector<std::vector<int>> vsurf;
 
-    float thFlatThreshold;
+  int thNumCurvSize;
 
-    float thBreakCornerDis;
+  float thDistanceFaraway;
 
-    float thLidarNearestDis;  
+  int thNumFlat;
+
+  int thPartNum;
+
+  float thFlatThreshold;
+
+  float thBreakCornerDis;
+
+  float thLidarNearestDis;
 };
 
-#endif //LIO_LIVOX_LIDARFEATUREEXTRACTOR_H
+#endif  // INCLUDE_LIDARFEATUREEXTRACTOR_LIDARFEATUREEXTRACTOR_H_
