@@ -19,7 +19,6 @@ find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(pcl_ros REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(visualization_msgs REQUIRED)
@@ -44,7 +43,7 @@ include_directories(include
                    ${GLOG_INCLUDE_DIRS})
 
 # ScanRegistration executable
-add_executable(ScanRegistration 
+add_executable(ScanRegistration
                src/lio/ScanRegistration.cpp
                src/lio/LidarFeatureExtractor.cpp
                src/segment/segment.cpp
@@ -59,25 +58,24 @@ ament_target_dependencies(ScanRegistration
   tf2_ros
   tf2_geometry_msgs
   pcl_conversions
-  pcl_ros
   message_filters
   std_srvs
   visualization_msgs
 )
 
-target_link_libraries(ScanRegistration 
-  ${PCL_LIBRARIES} 
+target_link_libraries(ScanRegistration
+  ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${CERES_LIBRARIES}
   ${GLOG_LIBRARIES}
 )
 
 # PoseEstimation executable
-add_executable(PoseEstimation 
+add_executable(PoseEstimation
                src/lio/PoseEstimation.cpp
                src/lio/Estimator.cpp
                src/lio/IMUIntegrator.cpp
-               src/lio/ceresfunc.cpp 
+               src/lio/ceresfunc.cpp
                src/lio/Map_Manager.cpp)
 
 ament_target_dependencies(PoseEstimation
@@ -89,13 +87,12 @@ ament_target_dependencies(PoseEstimation
   tf2_ros
   tf2_geometry_msgs
   pcl_conversions
-  pcl_ros
   message_filters
   std_srvs
   visualization_msgs
 )
 
-target_link_libraries(PoseEstimation 
+target_link_libraries(PoseEstimation
   ${PCL_LIBRARIES}
   ${CERES_LIBRARIES}
   ${GLOG_LIBRARIES}
@@ -124,6 +121,3 @@ install(DIRECTORY rviz_cfg
 )
 
 ament_package()
-
-
-

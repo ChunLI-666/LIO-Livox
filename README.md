@@ -1,7 +1,7 @@
 # LIO-Livox (A Robust LiDAR-Inertial Odometry for Livox LiDAR)
-This respository implements a robust LiDAR-inertial odometry system for Livox LiDAR. 
-The system uses only a single Livox LiDAR with a built-in IMU. It has a robust initialization module, 
-which is independent to the sensor motion. **It can be initialized with the static state, dynamic state, and the mixture of static and dynamic state.** 
+This respository implements a robust LiDAR-inertial odometry system for Livox LiDAR.
+The system uses only a single Livox LiDAR with a built-in IMU. It has a robust initialization module,
+which is independent to the sensor motion. **It can be initialized with the static state, dynamic state, and the mixture of static and dynamic state.**
 The system achieves super robust performance. **It can pass through a 4km-tunnel and run on the highway with a very high speed (about 80km/h) using a single Livox Horizon.**
 Moreover, **it is also robust to dynamic objects**, such as cars, bicycles, and pedestrains. It obtains high precision of localization even in traffic jams.
 **The mapping result is precise even most of the FOV is occluded by vehicles.**
@@ -16,7 +16,7 @@ Videos of the demonstration of the system can be found on Youtube and Bilibili. 
 </div>
 <div align="center">
 <img src="./doc/factory.gif" width="850px">
-<img src="./doc/plaza.gif" width="850px"> 
+<img src="./doc/plaza.gif" width="850px">
 </div>
 ## System achritecture
 
@@ -31,16 +31,16 @@ The system consists of two ros nodes: ScanRegistartion and PoseEstimation.
 The system is mainly designed for car platforms in the large scale outdoor environment.
 Users can easily run the system with a Livox Horizon or HAP LiDAR. It is still stable in indoor,we also support Mid-360 which is designed for robots now.
 
-The system starts with the node "ScanRegistartion", where feature points are extracted. Before the feature extraction, dynamic objects are removed from the raw point cloud, since in urban scenes there are usually many dynamic objects, which 
-affect system robustness and precision. For the dynamic objects filter, we use a fast point cloud segmentation method. The Euclidean clustering is applied to group points into some clusters. The raw point cloud is divided into ground points, background points, and foreground points. 
+The system starts with the node "ScanRegistartion", where feature points are extracted. Before the feature extraction, dynamic objects are removed from the raw point cloud, since in urban scenes there are usually many dynamic objects, which
+affect system robustness and precision. For the dynamic objects filter, we use a fast point cloud segmentation method. The Euclidean clustering is applied to group points into some clusters. The raw point cloud is divided into ground points, background points, and foreground points.
 Foreground points are considered as dynamic objects, which are excluded form the feature extraction process. Due to the dynamic objects filter, the system obtains high robustness in dynamic scenes.
 
-In open scenarios, usually few features can be extracted, leading to degeneracy on certain degrees of freedom. To tackle this problem, we developed a feature extraction process to make the distribution of feature points wide and uniform. 
+In open scenarios, usually few features can be extracted, leading to degeneracy on certain degrees of freedom. To tackle this problem, we developed a feature extraction process to make the distribution of feature points wide and uniform.
 A uniform and wide distribution provides more constraints on all 6 degrees of freedom, which is helpful for eliminating degeneracy. Besides, some irregular points also provides information in feature-less
 scenes. Therefore, we also extract irregular features as a class for the point cloud registration.
 Feature points are classifed into three types, corner features, surface features, and irregular features, according to their
-local geometry properties. We first extract points with large curvature and isolated points on each scan line as corner points. Then principal components analysis (PCA) is performed to classify surface features and irregular features, as shown in the following figure. 
-For points with different distance, thresholds are set to different values, in order to make the distribution of points in space as uniform as possible. 
+local geometry properties. We first extract points with large curvature and isolated points on each scan line as corner points. Then principal components analysis (PCA) is performed to classify surface features and irregular features, as shown in the following figure.
+For points with different distance, thresholds are set to different values, in order to make the distribution of points in space as uniform as possible.
 
 <div align="center">
 <img src="./doc/feature extraction.png" height="400px">
@@ -52,10 +52,19 @@ Inspired by ORB-SLAM3, a maximum a posteriori (MAP) estimation method is adopted
 This method doesn't need a careful initialization process. **The system can be initialized with an arbitrary motion.** This method takes into account sensor uncertainty, which obtains the optimum in the sense of maximum posterior probability.
 It achieves efficient, robust, and accurate performance.
 After the initialization, a tightly coupled slding window based sensor fusion module is performed to estimate IMU poses, biases, and velocities within the sliding window.
-Simultaneously, an extra thread builds and maintains the global map in parallel. 
+Simultaneously, an extra thread builds and maintains the global map in parallel.
 
 
-## Prerequisites
+## Installation
+
+> **推荐使用 Docker 环境**: 我们提供了完整的 Docker 环境配置，可以在任何 Ubuntu 机器上快速部署。详细文档请参考 [环境安装文档](./doc/environment/README.md)。
+
+### For ROS2 Humble (Recommended)
+
+支持 ROS2 Humble（Ubuntu 22.04），详细安装说明请参考：
+- [Docker 环境安装](./doc/environment/INSTALL_DOCKER.md) - 快速使用 Docker 部署
+- [Docker 详细文档](./doc/environment/DOCKER_SETUP.md) - 完整的 Docker 使用指南
+- [环境安装文档](./doc/environment/README.md) - 包含 Docker 和本地安装说明
 
 ### For ROS1 (Original)
 *  [Ubuntu](http://ubuntu.com) (tested on 16.04 and 18.04)
@@ -69,9 +78,13 @@ Simultaneously, an extra thread builds and maintains the global map in parallel.
    sudo apt-get install libsuitesparse-dev
    ```
 
-### For ROS2 Foxy (This branch)
-*  [Ubuntu](http://ubuntu.com) 20.04
-*  [ROS2 Foxy](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html)
+### For ROS2 Foxy/Humble (This branch)
+
+**ROS2 Foxy** (Ubuntu 20.04) 和 **ROS2 Humble** (Ubuntu 22.04) 都支持。
+
+**依赖项**:
+*  [Ubuntu](http://ubuntu.com) 20.04 (Foxy) 或 22.04 (Humble)
+*  [ROS2 Foxy](https://docs.ros.org/en/foxy/Installation/Ubuntu-Install-Debians.html) 或 [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
 *  [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
 *  [Ceres Solver](http://ceres-solver.org/installation.html)
 *  [PCL](http://www.pointclouds.org/downloads/linux.html)
@@ -80,6 +93,8 @@ Simultaneously, an extra thread builds and maintains the global map in parallel.
    ```
    sudo apt-get install libsuitesparse-dev
    ```
+
+> **提示**: 推荐使用 Docker 环境，可以避免手动安装依赖的麻烦。参考 [环境安装文档](./doc/environment/README.md)。
 
 ## Compilation
 
@@ -177,8 +192,8 @@ The topic of IMU messages is /livox/imu and its type is sensor_msgs/msg/Imu.
 
 There are some parameters in launch files:
 *  IMU_Mode: choose IMU information fusion strategy, there are 3 modes:
-    -  0 - without using IMU information, pure LiDAR odometry, motion distortion is removed using a constant velocity model 
-    -  1 - using IMU preintegration to remove motion distortion 
+    -  0 - without using IMU information, pure LiDAR odometry, motion distortion is removed using a constant velocity model
+    -  1 - using IMU preintegration to remove motion distortion
     -  2 - tightly coupling IMU and LiDAR information
 *  Extrinsic_Tlb: extrinsic parameter between LiDAR and IMU, which uses SE3 form. If you want to use an external IMU, you need to calibrate your own sensor suite
 and change this parameter to your extrinsic parameter.
