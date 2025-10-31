@@ -98,10 +98,45 @@ target_link_libraries(PoseEstimation
   ${GLOG_LIBRARIES}
 )
 
+# LioLivoxUnified executable (unified version with both nodes)
+add_executable(LioLivoxUnified
+               src/lio/LioLivoxUnified.cpp
+               src/lio/LidarFeatureExtractor.cpp
+               src/segment/segment.cpp
+               src/segment/pointsCorrect.cpp
+               src/lio/Estimator.cpp
+               src/lio/IMUIntegrator.cpp
+               src/lio/ceresfunc.cpp
+               src/lio/Map_Manager.cpp)
+
+target_compile_definitions(LioLivoxUnified PRIVATE UNIFIED_BUILD)
+
+ament_target_dependencies(LioLivoxUnified
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  pcl_conversions
+  message_filters
+  std_srvs
+  visualization_msgs
+)
+
+target_link_libraries(LioLivoxUnified
+  ${PCL_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${CERES_LIBRARIES}
+  ${GLOG_LIBRARIES}
+)
+
 # Install executables
 install(TARGETS
   ScanRegistration
   PoseEstimation
+  LioLivoxUnified
   DESTINATION lib/${PROJECT_NAME}
 )
 

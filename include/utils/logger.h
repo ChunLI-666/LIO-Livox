@@ -28,25 +28,25 @@ public:
                           const std::string& log_level = "INFO",
                           int max_log_size = 100,
                           int max_log_files = 10) {
-        
+
         // 创建日志目录
         std::filesystem::create_directories(log_dir);
-        
+
         // 生成创建时间戳
         auto now = std::chrono::system_clock::now();
         auto time_t = std::chrono::system_clock::to_time_t(now);
-        
+
         std::stringstream ss;
         ss << std::put_time(std::localtime(&time_t), "%Y%m%d-%H%M%S");
-        
+
         std::string timestamp = ss.str();
-        
+
         // 设置日志文件路径格式：lio_livox_create-timestamp.log
         std::string unified_log = log_dir + "/lio_livox_" + timestamp + ".log";
-        
+
         // 初始化glog
         google::InitGoogleLogging("LioLivox");
-        
+
         // 设置日志级别
         if (log_level == "INFO") {
             FLAGS_minloglevel = google::GLOG_INFO;
@@ -57,37 +57,44 @@ public:
         } else if (log_level == "FATAL") {
             FLAGS_minloglevel = google::GLOG_FATAL;
         }
-        
+
         // 设置所有级别的日志都输出到同一个文件
         google::SetLogDestination(google::GLOG_INFO, unified_log.c_str());
         google::SetLogDestination(google::GLOG_WARNING, unified_log.c_str());
         google::SetLogDestination(google::GLOG_ERROR, unified_log.c_str());
         google::SetLogDestination(google::GLOG_FATAL, unified_log.c_str());
-        
+
         // 设置日志格式
         FLAGS_logtostderr = false;  // 不输出到stderr
         FLAGS_alsologtostderr = false;  // 不同时输出到stderr
         FLAGS_colorlogtostderr = false;  // 不使用颜色
         FLAGS_log_prefix = true;  // 包含日志前缀
         FLAGS_logbufsecs = 0;  // 立即刷新日志缓冲区
-        
+
         // 设置日志文件大小和数量限制
         FLAGS_max_log_size = max_log_size;  // MB
         // FLAGS_max_log_files = max_log_files;  // 这个标志在某些版本的glog中不存在
-        
+
         // 设置日志格式
+        // 注意：以下 FLAGS 在较新版本的 glog 中可能不存在，使用条件编译
+        #ifdef FLAGS_log_year_in_prefix
         FLAGS_log_year_in_prefix = true;
+        #endif
+        #ifdef FLAGS_log_utc_time
         FLAGS_log_utc_time = false;  // 使用本地时间
-        
+        #endif
+
         // 禁用glog的自动文件名后缀
+        #ifdef FLAGS_log_link
         FLAGS_log_link = "";  // 不创建符号链接
-        
+        #endif
+
         LOG(INFO) << "Logger initialized for program: " << program_name;
         LOG(INFO) << "Log directory: " << log_dir;
         LOG(INFO) << "Log level: " << log_level;
         LOG(INFO) << "Unified log file: " << unified_log;
     }
-    
+
     /**
      * @brief 关闭日志系统
      */
@@ -95,7 +102,7 @@ public:
         LOG(INFO) << "Shutting down logger...";
         google::ShutdownGoogleLogging();
     }
-    
+
     /**
      * @brief 设置日志级别
      * @param level 日志级别
@@ -111,7 +118,7 @@ public:
             FLAGS_minloglevel = google::GLOG_FATAL;
         }
     }
-    
+
     /**
      * @brief 启用/禁用控制台输出
      * @param enable 是否启用

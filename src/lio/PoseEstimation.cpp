@@ -1,5 +1,6 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+#include <ceres/local_parameterization.h>
 #include "utils/ceresfunc.h"
 #include "utils/logger.h"
 #include "Estimator/Estimator.h"
@@ -16,6 +17,7 @@ typedef pcl::PointXYZINormal PointType;
 // Forward declaration
 class PoseEstimationNode;
 
+#ifndef UNIFIED_BUILD
 // Global variables for signal handling
 PoseEstimationNode* g_node = nullptr;
 std::shared_ptr<Estimator> g_estimator = nullptr;
@@ -24,17 +26,18 @@ std::shared_ptr<Estimator> g_estimator = nullptr;
 void signalHandler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
         LIO_LOG_INFO << "Received signal " << signal << ". Saving map before exit...";
-        
+
         if (g_estimator != nullptr) {
             std::string output_dir = "/home/charles/project/LIO-Livox/mapping_results";
             g_estimator->saveMapToPCD(output_dir);
         }
-        
+
         LIO_LOG_INFO << "Map saved. Exiting...";
         rclcpp::shutdown();
         exit(0);
     }
 }
+#endif  // UNIFIED_BUILD
 
 class PoseEstimationNode : public rclcpp::Node
 {
@@ -46,21 +49,21 @@ public:
         this->declare_parameter("filter_parameter_surf", 0.4);
         this->declare_parameter("IMU_Mode", 2);
         this->declare_parameter("Extrinsic_Tlb", std::vector<double>());
-        
+
         // Get parameters
         this->get_parameter("filter_parameter_corner", filter_parameter_corner);
         this->get_parameter("filter_parameter_surf", filter_parameter_surf);
         this->get_parameter("IMU_Mode", IMU_Mode);
-        
+
         std::vector<double> vecTlb;
         this->get_parameter("Extrinsic_Tlb", vecTlb);
-        
+
         // Validate extrinsic parameter vector size
         if (vecTlb.size() < 12) {
             LIO_LOG_ERROR << "Extrinsic_Tlb parameter must have at least 12 elements, got " << vecTlb.size();
             throw std::runtime_error("Invalid Extrinsic_Tlb parameter size");
         }
-        
+
         // Set extrinsic matrix between lidar & IMU
         Eigen::Matrix3d R;
         Eigen::Vector3d t;
@@ -76,42 +79,42 @@ public:
         exRbl = R.transpose();
         exPlb = t;
         exPbl = -1.0 * exRbl * exPlb;
-        
+
         // Create publishers
         pubLaserOdometry = this->create_publisher<nav_msgs::msg::Odometry>("/livox_odometry_mapped", 5);
         pubLaserOdometryPath = this->create_publisher<nav_msgs::msg::Path>("/livox_odometry_path_mapped", 5);
         pubFullLaserCloud = this->create_publisher<sensor_msgs::msg::PointCloud2>("/livox_full_cloud_mapped", 10);
         pubGps = this->create_publisher<sensor_msgs::msg::NavSatFix>("/lidar", 1000);
-        
+
         // Create subscribers
         subFullCloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "/livox_full_cloud", 10, 
+            "/livox_full_cloud", 10,
             std::bind(&PoseEstimationNode::fullCallBack, this, std::placeholders::_1));
-        
+
         if(IMU_Mode > 0) {
             sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
-                "/livox/imu", 2000, 
+                "/livox/imu", 2000,
                 std::bind(&PoseEstimationNode::imu_callback, this, std::placeholders::_1));
         }
-        
+
         if(IMU_Mode < 2)
             WINDOWSIZE = 1;
         else
             WINDOWSIZE = 20;
-        
+
         // Initialize transform broadcaster
         tfBroadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-        
+
         // Initialize other components
         laserCloudFullRes.reset(new pcl::PointCloud<PointType>);
         estimator = new Estimator(filter_parameter_corner, filter_parameter_surf);
         g_estimator = std::shared_ptr<Estimator>(estimator, [](Estimator*){});
         lidarFrameList.reset(new std::list<Estimator::LidarFrame>);
-        
+
         // Start processing thread
         process_thread = std::thread(&PoseEstimationNode::process, this);
     }
-    
+
     ~PoseEstimationNode()
     {
         if(process_thread.joinable()) {
@@ -125,24 +128,24 @@ private:
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pubLaserOdometryPath;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubFullLaserCloud;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pubGps;
-    
+
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subFullCloud;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
-    
+
     std::shared_ptr<tf2_ros::TransformBroadcaster> tfBroadcaster;
-    
+
     std::thread process_thread;
-    
+
     // Member variables
     int WINDOWSIZE;
     bool LidarIMUInited = false;
     std::shared_ptr<std::list<Estimator::LidarFrame>> lidarFrameList;
     pcl::PointCloud<PointType>::Ptr laserCloudFullRes;
     Estimator* estimator;
-    
+
     bool newfullCloud = false;
     Eigen::Matrix4d transformAftMapped = Eigen::Matrix4d::Identity();
-    
+
     std::mutex _mutexLidarQueue;
     std::queue<sensor_msgs::msg::PointCloud2::SharedPtr> _lidarMsgQueue;
     std::mutex _mutexIMUQueue;
@@ -157,7 +160,7 @@ private:
     sensor_msgs::msg::NavSatFix gps;
     int pushCount = 0;
     double startTime = 0;
-    
+
     nav_msgs::msg::Path laserOdoPath;
 
     /** \brief publish odometry infomation
@@ -317,10 +320,18 @@ bool TryMAPInitialization() {
   para_quat[3] = 0;
 
 
-  ceres::Manifold *quatParam = new ceres::QuaternionManifold();
+  // 使用 Ceres 的四元数参数化
+  // 尝试使用 Manifold API（Ceres 2.1+），如果不可用则回退到 LocalParameterization
   ceres::Problem problem_quat;
-  
-  problem_quat.AddParameterBlock(para_quat, 4, quatParam);
+  #if defined(CERES_VERSION_MAJOR) && CERES_VERSION_MAJOR >= 2 && defined(CERES_VERSION_MINOR) && CERES_VERSION_MINOR >= 1
+    // Ceres 2.1+ 使用 Manifold API
+    ceres::Manifold *quatParam = new ceres::EigenQuaternionManifold();
+    problem_quat.AddParameterBlock(para_quat, 4, quatParam);
+  #else
+    // Ceres 1.x 或 2.0 使用 LocalParameterization API
+    ceres::LocalParameterization *quatParam = new ceres::EigenQuaternionParameterization();
+    problem_quat.AddParameterBlock(para_quat, 4, quatParam);
+  #endif
 
   problem_quat.AddResidualBlock(Cost_Initial_G::Create(average_acc),
                                 nullptr,
@@ -344,7 +355,7 @@ bool TryMAPInitialization() {
   }
   Sophus::SO3d SO3_R_wg(q_wg.toRotationMatrix());
   prior_r = SO3_R_wg.log();
-  
+
   for (int i = 1; i < v_size; i++){
     auto iter = lidarFrameList->begin();
     auto iter_next = lidarFrameList->begin();
@@ -386,12 +397,12 @@ bool TryMAPInitialization() {
   for(int i = 0; i < v_size; i++) {
     problem.AddParameterBlock(para_v[i], 3);
   }
-  
+
   // add CostFunction
   problem.AddResidualBlock(Cost_Initialization_Prior_R::Create(prior_r, sqrt_information_r),
                            nullptr,
                            para_r);
-  
+
   problem.AddResidualBlock(Cost_Initialization_Prior_bv::Create(prior_ba, sqrt_information_ba),
                            nullptr,
                            para_ba);
@@ -485,7 +496,7 @@ bool TryMAPInitialization() {
 	lidarFrameList->back().Q = Qwl * exRlb;
 
 	// LIO_LOG_INFO << "\n=============================\n| Initialization Successful |\n=============================";
-  
+
   return true;
 }
 
@@ -527,7 +538,7 @@ void process(){
         while (!fetchImuMsgs(time_last_lidar, time_curr_lidar, vimuMsg)) {
           countFail++;
           if (countFail > 100){
-            LIO_LOG_WARNING << "[PoseEstimation] Failed to fetch IMU data after 100 retries, time range: [" 
+            LIO_LOG_WARNING << "[PoseEstimation] Failed to fetch IMU data after 100 retries, time range: ["
                        << std::fixed << std::setprecision(6) << time_last_lidar << ", " << time_curr_lidar << "]";
             break;
           }
@@ -719,35 +730,36 @@ void process(){
 
 };
 
+#ifndef UNIFIED_BUILD
 int main(int argc, char** argv)
 {
     // Initialize logging system
     lio_livox::Logger::Initialize("LioLivox", "/home/charles/project/LIO-Livox/logs", "INFO");
-    
+
     rclcpp::init(argc, argv);
-    
+
     // Register signal handlers
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
-    
+
     auto node = std::make_shared<PoseEstimationNode>();
     g_node = node.get();
-    
+
     LIO_LOG_INFO << "PoseEstimation node started. Press Ctrl+C to save map and exit.";
-    
+
     rclcpp::spin(node);
-    
+
     // Save map on normal exit
     if (g_estimator != nullptr) {
         LIO_LOG_INFO << "Saving map on normal exit...";
         std::string output_dir = "/home/charles/project/LIO-Livox/mapping_results";
         g_estimator->saveMapToPCD(output_dir);
     }
-    
+
     // Shutdown logging system
     lio_livox::Logger::Shutdown();
-    
+
     rclcpp::shutdown();
     return 0;
 }
-
+#endif  // UNIFIED_BUILD
